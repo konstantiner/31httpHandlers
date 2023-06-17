@@ -1,50 +1,40 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"net/url"
 	"net/http"
+	"net/http/httputil"
 )
 
-var counter = 0
-
-type Handler struct {}
-
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	content, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
-	defer r.Body.Close()
-
-	firstHost := "http://localhost:8080" + r.URL.Path
-	secondHost := "http://localhost:8081" + r.URL.Path
-
-	if counter == 0 {
-		_, err := http.Post(firstHost, "", bytes.NewBuffer([]byte(content)))
-		if err != nil {
-			fmt.Println("Сервер не доступен")
-			//log.Fatal(err)
-		}
-		counter ++
-	} else {
-		_, err := http.Post(secondHost, "", bytes.NewBuffer([]byte(content)))
-		if err != nil {
-			fmt.Println("Сервер не доступен")
-			//log.Fatal(err)
-		}
-		counter --
-	}
-}
-
 func main() {
-	log.Println(http.ListenAndServe("localhost:8877", &Handler{}))
-}
+	firstHost, err := url.Parse("http://localhost:8080")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-//curl -X POST -d "{\"name\": \"Vasiliy\", \"age\": 20}" http://localhost:8877/test
-//curl -X POST -d "{\"name\": \"Sveta\", \"age\": 20}" http://localhost:8877/users
-//http://localhost:8877/users
+	secondHost, err := url.Parse("http://localhost:8081")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	counter := 0
+	
+	proxy := httputil.NewSingleHostReverseProxy(&url.URL{})
+	proxy.Director = func(req *http.Request) {
+		if counter <= 0 {
+			counter++
+			fmt.Println("8080")
+			req.URL.Scheme = firstHost.Scheme
+			req.URL.Host = firstHost.Host
+		} else {
+			counter--
+			fmt.Println("8081")
+			req.URL.Scheme = secondHost.Scheme
+			req.URL.Host = secondHost.Host
+		}
+	}
+
+	log.Fatal(http.ListenAndServe("localhost:8877", proxy))
+}

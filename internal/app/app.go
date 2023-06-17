@@ -50,8 +50,12 @@ func create(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 		return
 	}
-	
-	b := services.CreateUser(u)
+
+	type id struct {
+		Id int `json:"id"`
+	}
+	userId := id{services.CreateUser(u)}
+	b, _ := json.Marshal(userId)
 	w.WriteHeader(http.StatusCreated)
 	w.Write(b)
 }

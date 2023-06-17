@@ -14,9 +14,8 @@ func GetAllUsers() (b []byte){
 	return b
 }
 
-func CreateUser(u entities.User) (b []byte) {
-	userId := storage.CreateUser(u)
-	b = []byte(fmt.Sprintf("Пользователь %s добавлен. ID = %d", u.Name, userId))
+func CreateUser(u entities.User) (userId int) {
+	userId = storage.CreateUser(u)
 	return
 }
 
